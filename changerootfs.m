@@ -19,6 +19,11 @@ bool change_rootvnode(uint64_t vp, pid_t pid){
     
     if(!proc) return false;
     
+    printf("escape sandbox\n");
+    uint64_t creds = kernel_read64(proc + /*off_p_ucred*/0xf0);
+    uint64_t cr_label = kernel_read64(creds + 0x78/*off_ucred_cr_label*/);
+    kernel_write64(cr_label + 0x10/*off_sandbox_slot*/, 0);
+    
     printf("reading pfd\n");
     uint64_t filedesc = kernel_read64(proc + off_p_pfd);
     

@@ -19,6 +19,8 @@
 #include <mach-o/nlist.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <dlfcn.h>
+#include <libproc.h>
 
 #define LZSS_F (18)
 #define LZSS_N (4096)
@@ -91,6 +93,7 @@ typedef char io_string_t[512];
 typedef mach_port_t io_object_t;
 typedef uint32_t IOOptionBits, ipc_entry_num_t;
 typedef io_object_t io_service_t, io_connect_t, io_registry_entry_t;
+typedef int (*krw_0_kread_func_t)(kaddr_t, void *, size_t), (*krw_0_kwrite_func_t)(const void *, kaddr_t, size_t);
 
 typedef struct {
 	struct section_64 s64;
@@ -149,6 +152,7 @@ kern_return_t
 mach_vm_region(vm_map_t, mach_vm_address_t *, mach_vm_size_t *, vm_region_flavor_t, vm_region_info_t, mach_msg_type_number_t *, mach_port_t *);
 
 extern const mach_port_t kIOMasterPortDefault;
+static void *krw_0;
 
 static kread_func_t kread_buf;
 task_t tfp0 = TASK_NULL;
@@ -278,6 +282,20 @@ kdecompress(const void *src, size_t src_len, size_t *dst_len) {
 		}
 	}
 	return NULL;
+}
+
+static kern_return_t
+kread_buf_krw_0(kaddr_t addr, void *buf, mach_vm_size_t sz) {
+    static krw_0_kread_func_t krw_0_kread;
+
+    return (krw_0_kread != NULL || (krw_0_kread = (krw_0_kread_func_t)dlsym(krw_0, "kread")) != NULL) && krw_0_kread(addr, buf, sz) == 0 ? KERN_SUCCESS : KERN_FAILURE;
+}
+
+static kern_return_t
+kwrite_buf_krw_0(kaddr_t addr, const void *buf, mach_msg_type_number_t sz) {
+    static krw_0_kwrite_func_t krw_0_kwrite;
+
+    return (krw_0_kwrite != NULL || (krw_0_kwrite = (krw_0_kwrite_func_t)dlsym(krw_0, "kwrite")) != NULL) && krw_0_kwrite(buf, addr, sz) == 0 ? KERN_SUCCESS : KERN_FAILURE;
 }
 
 kern_return_t
@@ -586,60 +604,64 @@ pfinder_allproc(pfinder_t pfinder) {
 
 static kaddr_t
 pfinder_init_kbase(pfinder_t *pfinder) {
-	mach_msg_type_number_t cnt = TASK_DYLD_INFO_COUNT;
-	vm_region_extended_info_data_t extended_info;
-	kaddr_t addr, kext_addr, kext_addr_slid;
-	CFDictionaryRef kexts_info, kext_info;
-	task_dyld_info_data_t dyld_info;
-	char kext_name[KMOD_MAX_NAME];
-	struct mach_header_64 mh64;
-	CFStringRef kext_name_cf;
-	CFNumberRef kext_addr_cf;
-	mach_port_t object_name;
-	CFArrayRef kext_names;
-	mach_vm_size_t sz;
+    mach_msg_type_number_t cnt = TASK_DYLD_INFO_COUNT;
+            kaddr_t kext_addr, kext_addr_slid;
+            CFDictionaryRef kexts_info, kext_info;
+            task_dyld_info_data_t dyld_info;
+            char kext_name[KMOD_MAX_NAME];
+            struct mach_header_64 mh64;
+            CFStringRef kext_name_cf;
+            CFNumberRef kext_addr_cf;
+            CFArrayRef kext_names;
 
-	if(pfinder->kslide == 0) {
-		if(task_info(tfp0, TASK_DYLD_INFO, (task_info_t)&dyld_info, &cnt) == KERN_SUCCESS) {
-			pfinder->kslide = dyld_info.all_image_info_size;
-		}
-		if(pfinder->kslide == 0) {
-			cnt = VM_REGION_EXTENDED_INFO_COUNT;
-			for(addr = 0; mach_vm_region(tfp0, &addr, &sz, VM_REGION_EXTENDED_INFO, (vm_region_info_t)&extended_info, &cnt, &object_name) == KERN_SUCCESS; addr += sz) {
-				mach_port_deallocate(mach_task_self(), object_name);
-				if(extended_info.protection == VM_PROT_READ && extended_info.user_tag == VM_KERN_MEMORY_OSKEXT) {
-					if(kread_buf(addr + LOADED_KEXT_SUMMARY_HDR_NAME_OFF, kext_name, sizeof(kext_name)) == KERN_SUCCESS) {
-						printf("kext_name: %s\n", kext_name);
-						if(kread_addr(addr + LOADED_KEXT_SUMMARY_HDR_ADDR_OFF, &kext_addr_slid) == KERN_SUCCESS) {
-							printf("kext_addr_slid: " KADDR_FMT "\n", kext_addr_slid);
-							if((kext_name_cf = CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, kext_name, kCFStringEncodingUTF8, kCFAllocatorNull)) != NULL) {
-								if((kext_names = CFArrayCreate(kCFAllocatorDefault, (const void **)&kext_name_cf, 1, &kCFTypeArrayCallBacks)) != NULL) {
-									if((kexts_info = OSKextCopyLoadedKextInfo(kext_names, NULL)) != NULL) {
-										if(CFGetTypeID(kexts_info) == CFDictionaryGetTypeID() && CFDictionaryGetCount(kexts_info) == 1 && (kext_info = CFDictionaryGetValue(kexts_info, kext_name_cf)) != NULL && CFGetTypeID(kext_info) == CFDictionaryGetTypeID() && (kext_addr_cf = CFDictionaryGetValue(kext_info, CFSTR(kOSBundleLoadAddressKey))) != NULL && CFGetTypeID(kext_addr_cf) == CFNumberGetTypeID() && CFNumberGetValue(kext_addr_cf, kCFNumberSInt64Type, &kext_addr) && kext_addr_slid > kext_addr) {
-											pfinder->kslide = kext_addr_slid - kext_addr;
-										}
-										CFRelease(kexts_info);
-									}
-									CFRelease(kext_names);
-								}
-								CFRelease(kext_name_cf);
-							}
-						}
-					}
-					break;
-				}
-			}
-		}
-	}
-	if(pfinder->base + pfinder->kslide > pfinder->base && kread_buf(pfinder->base + pfinder->kslide, &mh64, sizeof(mh64)) == KERN_SUCCESS && mh64.magic == MH_MAGIC_64 && mh64.cputype == CPU_TYPE_ARM64 && mh64.filetype == MH_EXECUTE) {
-		pfinder->sec_text.s64.addr += pfinder->kslide;
-		pfinder->sec_cstring.s64.addr += pfinder->kslide;
-		printf("kbase: " KADDR_FMT ", kslide: " KADDR_FMT "\n", pfinder->base + pfinder->kslide, pfinder->kslide);
-		kbase = pfinder->base + pfinder->kslide;
-		kslide = pfinder->kslide;
-		return KERN_SUCCESS;
-	}
-	return KERN_FAILURE;
+        struct {
+                uint32_t pri_prot, pri_max_prot, pri_inheritance, pri_flags;
+                uint64_t pri_offset;
+                uint32_t pri_behavior, pri_user_wired_cnt, pri_user_tag, pri_pages_resident, pri_pages_shared_now_private, pri_pages_swapped_out, pri_pages_dirtied, pri_ref_cnt, pri_shadow_depth, pri_share_mode, pri_private_pages_resident, pri_shared_pages_resident, pri_obj_id, pri_depth;
+                kaddr_t pri_addr;
+                uint64_t pri_sz;
+            } pri;
+
+            if(pfinder->kslide == 0) {
+                if(task_info(tfp0, TASK_DYLD_INFO, (task_info_t)&dyld_info, &cnt) == KERN_SUCCESS) {
+                    pfinder->kslide = dyld_info.all_image_info_size;
+                }
+                if(pfinder->kslide == 0) {
+                    cnt = VM_REGION_EXTENDED_INFO_COUNT;
+                    for(pri.pri_addr = 0; proc_pidinfo(0, PROC_PIDREGIONINFO, pri.pri_addr, &pri, sizeof(pri)) == sizeof(pri); pri.pri_addr += pri.pri_sz) {
+                        if(pri.pri_prot == VM_PROT_READ && pri.pri_user_tag == VM_KERN_MEMORY_OSKEXT) {
+                            if(kread_buf(pri.pri_addr + LOADED_KEXT_SUMMARY_HDR_NAME_OFF, kext_name, sizeof(kext_name)) == KERN_SUCCESS) {
+                                printf("kext_name: %s\n", kext_name);
+                                if(kread_addr(pri.pri_addr + LOADED_KEXT_SUMMARY_HDR_ADDR_OFF, &kext_addr_slid) == KERN_SUCCESS) {
+                                    printf("kext_addr_slid: " KADDR_FMT "\n", kext_addr_slid);
+                                    if((kext_name_cf = CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, kext_name, kCFStringEncodingUTF8, kCFAllocatorNull)) != NULL) {
+                                        if((kext_names = CFArrayCreate(kCFAllocatorDefault, (const void **)&kext_name_cf, 1, &kCFTypeArrayCallBacks)) != NULL) {
+                                            if((kexts_info = OSKextCopyLoadedKextInfo(kext_names, NULL)) != NULL) {
+                                                if(CFGetTypeID(kexts_info) == CFDictionaryGetTypeID() && CFDictionaryGetCount(kexts_info) == 1 && (kext_info = CFDictionaryGetValue(kexts_info, kext_name_cf)) != NULL && CFGetTypeID(kext_info) == CFDictionaryGetTypeID() && (kext_addr_cf = CFDictionaryGetValue(kext_info, CFSTR(kOSBundleLoadAddressKey))) != NULL && CFGetTypeID(kext_addr_cf) == CFNumberGetTypeID() && CFNumberGetValue(kext_addr_cf, kCFNumberSInt64Type, &kext_addr) && kext_addr_slid > kext_addr) {
+                                                    pfinder->kslide = kext_addr_slid - kext_addr;
+                                                }
+                                                CFRelease(kexts_info);
+                                            }
+                                            CFRelease(kext_names);
+                                        }
+                                        CFRelease(kext_name_cf);
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            if(pfinder->base + pfinder->kslide > pfinder->base && kread_buf(pfinder->base + pfinder->kslide, &mh64, sizeof(mh64)) == KERN_SUCCESS && mh64.magic == MH_MAGIC_64 && mh64.cputype == CPU_TYPE_ARM64 && mh64.filetype == MH_EXECUTE) {
+                pfinder->sec_text.s64.addr += pfinder->kslide;
+                pfinder->sec_cstring.s64.addr += pfinder->kslide;
+                printf("kbase: " KADDR_FMT ", kslide: " KADDR_FMT "\n", pfinder->base + pfinder->kslide, pfinder->kslide);
+                kbase = pfinder->base + pfinder->kslide;
+                kslide = pfinder->kslide;
+                return KERN_SUCCESS;
+            }
+            return KERN_FAILURE;
 }
 
 static char *
@@ -918,10 +940,12 @@ entangle_nonce(uint64_t nonce, uint8_t entangled_nonce[CC_SHA384_DIGEST_LENGTH])
 
 void
 dimentio_term(void) {
-	if(tfp0 != TASK_NULL) {
-		mach_port_deallocate(mach_task_self(), tfp0);
-	}
-	setpriority(PRIO_PROCESS, 0, 0);
+    if(tfp0 != TASK_NULL) {
+        mach_port_deallocate(mach_task_self(), tfp0);
+    } else if(krw_0 != NULL) {
+            dlclose(krw_0);
+        }
+    setpriority(PRIO_PROCESS, 0, 0);
 }
 
 kern_return_t
@@ -930,11 +954,15 @@ dimentio_init(kaddr_t _kslide, kread_func_t _kread_buf, kwrite_func_t _kwrite_bu
 	if(_kread_buf != NULL && _kwrite_buf != NULL) {
 		kread_buf = _kread_buf;
 		kwrite_buf = _kwrite_buf;
-	} else if(init_tfp0() == KERN_SUCCESS) {
-		printf("tfp0: 0x%" PRIX32 "\n", tfp0);
-		kread_buf = _kread_buf != NULL ? _kread_buf : kread_buf_tfp0;
-		kwrite_buf = _kwrite_buf != NULL ? _kwrite_buf : kwrite_buf_tfp0;
-	}
+    } else if(init_tfp0() == KERN_SUCCESS) {
+            printf("tfp0: 0x%" PRIX32 "\n", tfp0);
+            kread_buf = _kread_buf != NULL ? _kread_buf : kread_buf_tfp0;
+            kwrite_buf = _kwrite_buf != NULL ? _kwrite_buf : kwrite_buf_tfp0;
+        } else if((krw_0 = dlopen("/usr/lib/libkrw.0.dylib", RTLD_LAZY)) != NULL) {
+            printf("libkrw!\n");
+            kread_buf = kread_buf_krw_0;
+            kwrite_buf = kwrite_buf_krw_0;
+        }
 	if(setpriority(PRIO_PROCESS, 0, PRIO_MIN) != -1 && pfinder_init_offsets() == KERN_SUCCESS) {
 		return KERN_SUCCESS;
 	}
@@ -1005,4 +1033,38 @@ dimentio(uint64_t nonce, uint8_t entangled_nonce[CC_SHA384_DIGEST_LENGTH], bool 
 		IOObjectRelease(nvram_serv);
 	}
 	return ret;
+}
+
+//read kernel
+uint32_t kernel_read32(uint64_t where) {
+    uint32_t out;
+    kread_buf(where, &out, sizeof(uint32_t));
+    return out;
+}
+
+uint64_t kernel_read64(uint64_t where) {
+    uint64_t out;
+    kread_buf(where, &out, sizeof(uint64_t));
+    return out;
+}
+
+//write kernel
+void kernel_write32(uint64_t where, uint32_t what) {
+    uint32_t _what = what;
+    kwrite_buf(where, &_what, sizeof(uint32_t));
+}
+
+void kernel_write64(uint64_t where, uint64_t what) {
+    uint64_t _what = what;
+    kwrite_buf(where, &_what, sizeof(uint64_t));
+}
+
+kern_return_t
+kread_buf_univ(kaddr_t addr, void *buf, mach_vm_size_t sz) {
+    return kread_buf(addr, buf, sz);
+}
+
+kern_return_t
+kwrite_buf_univ(kaddr_t addr, const void *buf, mach_msg_type_number_t sz) {
+    return kwrite_buf(addr, buf, sz);
 }

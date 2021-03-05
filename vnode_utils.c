@@ -59,8 +59,8 @@ bool copy_file_in_memory(char *original, char *replacement, bool set_usecount) {
     }
 
     struct vnode rvp, fvp;
-    kread_buf_tfp0(orig, &rvp, sizeof(struct vnode));
-    kread_buf_tfp0(fake, &fvp, sizeof(struct vnode));
+    kread_buf_univ(orig, &rvp, sizeof(struct vnode));
+    kread_buf_univ(fake, &fvp, sizeof(struct vnode));
 
     fvp.v_usecount = rvp.v_usecount;
     fvp.v_kusecount = rvp.v_kusecount;
@@ -71,7 +71,7 @@ bool copy_file_in_memory(char *original, char *replacement, bool set_usecount) {
     fvp.v_nclinks = rvp.v_nclinks;
 
 
-    kwrite_buf_tfp0(orig, &fvp, sizeof(struct vnode));
+    kwrite_buf_univ(orig, &fvp, sizeof(struct vnode));
 
     if (set_usecount) {
         set_vnode_usecount(orig, 0x2000, 0x2000);

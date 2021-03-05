@@ -13,14 +13,6 @@ uint32_t off_vnode_usecount;
 
 int offset_init();
 
-//read kernel
-uint32_t kernel_read32(uint64_t);
-uint64_t kernel_read64(uint64_t);
-
-//write kernel
-void kernel_write32(uint64_t, uint32_t);
-void kernel_write64(uint64_t, uint64_t);
-
 //get vnode
 uint64_t get_vnode_with_file_index(int, uint64_t);
 

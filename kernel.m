@@ -137,30 +137,6 @@ uint64_t proc_of_pid(pid_t pid) {
     return 0;
 }
 
-//read kernel
-uint32_t kernel_read32(uint64_t where) {
-	uint32_t out;
-	kread_buf_tfp0(where, &out, sizeof(uint32_t));
-	return out;
-}
-
-uint64_t kernel_read64(uint64_t where) {
-	uint64_t out;
-	kread_buf_tfp0(where, &out, sizeof(uint64_t));
-	return out;
-}
-
-//write kernel
-void kernel_write32(uint64_t where, uint32_t what) {
-	uint32_t _what = what;
-	kwrite_buf_tfp0(where, &_what, sizeof(uint32_t));
-}
-
-void kernel_write64(uint64_t where, uint64_t what) {
-	uint64_t _what = what;
-	kwrite_buf_tfp0(where, &_what, sizeof(uint64_t));
-}
-
 int init_kernel() {
   printf("======= init_kernel =======\n");
 
@@ -169,10 +145,10 @@ int init_kernel() {
     return 1;
   }
 
-  if(init_tfp0() != KERN_SUCCESS) {
-    printf("failed init_tfp0!\n");
-    return 1;
-  }
+//  if(init_tfp0() != KERN_SUCCESS) {
+//    printf("failed init_tfp0!\n");
+//    return 1;
+//  }
 
   if(kbase == 0) {
     printf("failed get kbase\n");

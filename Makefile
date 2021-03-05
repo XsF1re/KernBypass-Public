@@ -1,3 +1,9 @@
+GO_EASY_ON_ME = 1
+DEBUG=0
+FINALPACKAGE=1
+
+THEOS_DEVICE_IP = 127.0.0.1 -p 2222
+
 ARCHS = arm64
 
 include $(THEOS)/makefiles/common.mk
@@ -30,8 +36,8 @@ endif
 before-package::
 	mkdir -p $(THEOS_STAGING_DIR)/usr/lib/
 	cp $(LIB_DIR)/jelbrekLib.dylib $(THEOS_STAGING_DIR)/usr/lib
-	/usr/bin/ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/changerootfs
-	/usr/bin/ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/preparerootfs
+	ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/changerootfs
+	ldid -S./ent.plist $(THEOS_STAGING_DIR)/usr/bin/preparerootfs
 
 SUBPROJECTS += zzzzzzzzznotifychroot
 include $(THEOS_MAKE_PATH)/aggregate.mk

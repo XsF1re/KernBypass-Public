@@ -18,9 +18,6 @@
 #	include <CoreFoundation/CoreFoundation.h>
 #	include <mach/mach.h>
 #	define KADDR_FMT "0x%" PRIX64
-#	ifndef MIN
-#		define MIN(a, b) ((a) < (b) ? (a) : (b))
-#	endif
 typedef uint64_t kaddr_t;
 typedef kern_return_t (*kread_func_t)(kaddr_t, void *, mach_vm_size_t), (*kwrite_func_t)(kaddr_t, const void *, mach_msg_type_number_t);
 static kread_func_t kread_buf;
@@ -55,8 +52,15 @@ kern_return_t
 pfinder_init_offsets(void);
 
 kern_return_t
-kread_buf_tfp0(kaddr_t, void *, mach_vm_size_t);
-
+kread_buf_univ(kaddr_t, void *, mach_vm_size_t);
 kern_return_t
-kwrite_buf_tfp0(kaddr_t, const void *, mach_msg_type_number_t);
+kwrite_buf_univ(kaddr_t, const void *, mach_msg_type_number_t);
+//read kernel
+uint32_t kernel_read32(uint64_t);
+uint64_t kernel_read64(uint64_t);
+
+//write kernel
+void kernel_write32(uint64_t, uint32_t);
+void kernel_write64(uint64_t, uint64_t);
+
 #endif

@@ -16,10 +16,12 @@ LIB_DIR := lib
 preparerootfs_FILES = preparerootfs.m kernel.m libdimentio.c vnode_utils.c
 preparerootfs_CFLAGS = $(CFLAGS) -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -D USE_DEV_FAKEVAR
 preparerootfs_FRAMEWORKS = IOKit
+preparerootfs_LIBRARIES = krw
 
 changerootfs_FILES = changerootfs.m kernel.m libdimentio.c vnode_utils.c
 changerootfs_CFLAGS = $(CFLAGS) -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function
 changerootfs_FRAMEWORKS = IOKit
+changerootfs_LIBRARIES = krw
 
 ifdef USE_JELBREK_LIB
 	preparerootfs_LDFLAGS = $(LIB_DIR)/jelbrekLib.dylib

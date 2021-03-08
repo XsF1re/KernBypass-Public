@@ -11,6 +11,10 @@ uint32_t off_fd_rdir = 0;
 uint32_t off_fd_cdir = 0;
 uint32_t off_vnode_iocount = 0;
 uint32_t off_vnode_usecount = 0;
+uint32_t off_p_ucred = 0;
+uint32_t off_ucred_cr_label = 0;
+uint32_t off_sandbox_slot = 0;
+uint32_t off_amfi_slot = 0;
 
 #define kCFCoreFoundationVersionNumber_iOS_12_0    (1535.12)
 #define kCFCoreFoundationVersionNumber_iOS_13_0_b2 (1656)
@@ -26,6 +30,10 @@ int offset_init() {
       off_fd_cdir = 0x38;
       off_vnode_iocount = 0x64;
       off_vnode_usecount = 0x60;
+      off_p_ucred = 0xf0;
+      off_ucred_cr_label = 0x78;
+      off_sandbox_slot = 0x10;
+      off_amfi_slot = 0x8;
       return 0;
   }
 

@@ -340,6 +340,11 @@ kread_addr(kaddr_t addr, kaddr_t *val) {
 }
 
 kern_return_t
+kwrite_addr(kaddr_t addr, kaddr_t val) {
+    return kwrite_buf(addr, &val, sizeof(val));
+}
+
+kern_return_t
 kwrite_buf_tfp0(kaddr_t addr, const void *buf, mach_msg_type_number_t sz) {
 	vm_machine_attribute_val_t mattr_val = MATTR_VAL_CACHE_FLUSH;
 	mach_vm_address_t p = (mach_vm_address_t)buf;

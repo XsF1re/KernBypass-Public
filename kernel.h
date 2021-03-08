@@ -10,6 +10,10 @@ uint32_t off_fd_cdir;
 uint32_t off_vnode_iocount;
 uint32_t off_vnode_usecount;
 uint32_t off_vnode_usecount;
+uint32_t off_p_ucred;
+uint32_t off_ucred_cr_label;
+uint32_t off_sandbox_slot;
+uint32_t off_amfi_slot;
 
 int offset_init();
 

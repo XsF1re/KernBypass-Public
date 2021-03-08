@@ -177,7 +177,8 @@ int main(int argc, char *argv[], char *envp[]) {
         return 1;
     }
     
-    int err = init_kernel();
+    int err = 0;
+    err = init_kernel();
     if (err) {
         return 1;
     }

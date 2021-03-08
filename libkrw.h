@@ -101,7 +101,7 @@ int kdealloc(uint64_t addr, size_t size);
  * from `argv` and stores the return value in `*ret`.
  * On failure, `*ret` is left unchanged.
 **/
-int kcall(uint64_t func, size_t argc, const uint64_t *argv, uint64_t *ret);
+//int kcall(uint64_t func, size_t argc, const uint64_t *argv, uint64_t *ret);
 
 /**
  * physread

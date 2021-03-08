@@ -46,6 +46,9 @@ kern_return_t
 kread_addr(kaddr_t, kaddr_t *);
 
 kern_return_t
+kwrite_addr(kaddr_t, kaddr_t);
+
+kern_return_t
 find_task(pid_t, kaddr_t *);
 
 kern_return_t

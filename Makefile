@@ -13,12 +13,12 @@ TARGET := iphone:clang:11.2:11.2
 
 LIB_DIR := lib
 
-preparerootfs_FILES = preparerootfs.m kernel.m libdimentio.c vnode_utils.c kcall.c
+preparerootfs_FILES = preparerootfs.m kernel.m libdimentio.c vnode_utils.c kcall.c sandbox.m
 preparerootfs_CFLAGS = $(CFLAGS) -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -D USE_DEV_FAKEVAR
 preparerootfs_FRAMEWORKS = IOKit
 preparerootfs_LIBRARIES = krw
 
-changerootfs_FILES = changerootfs.m kernel.m libdimentio.c vnode_utils.c kcall.c
+changerootfs_FILES = changerootfs.m kernel.m libdimentio.c vnode_utils.c kcall.c sandbox.m
 changerootfs_CFLAGS = $(CFLAGS) -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function
 changerootfs_FRAMEWORKS = IOKit
 changerootfs_LIBRARIES = krw

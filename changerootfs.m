@@ -9,12 +9,14 @@
 
 #include "kcall.h"
 #include "libkrw.h"
+#include "sandbox.h"
+
 
 //#if 0
 extern CFNotificationCenterRef CFNotificationCenterGetDistributedCenter(void);
 
-static uint32_t off_OSDictionary_GetObjectWithCharP = sizeof(void*) * 0x26;
-static uint32_t off_OSDictionary_SetObjectWithCharP = sizeof(void*) * 0x1F;
+static uint32_t off_OSDictionary_GetObjectWithCharP = sizeof(void*) * 0x27;
+static uint32_t off_OSDictionary_SetObjectWithCharP = sizeof(void*) * 0x20;
 
 int OSDictionary_SetItem(uint64_t dict, const char *key, uint64_t val) {
     size_t len = strlen(key) + 1;
@@ -90,24 +92,37 @@ bool change_rootvnode(uint64_t vp, pid_t pid){
     
     if(!proc) return false;
     
-    printf("escape sandbox\n");
+    printf("set sandbox exception\n");
     uint64_t creds = kernel_read64(proc + off_p_ucred/*0xf0*/);
     uint64_t cr_label = kernel_read64(creds + off_ucred_cr_label/*0x78*/);
-    kernel_write64(cr_label + off_sandbox_slot/*0x10*/, 0);
+    uint64_t sandbox = kernel_read64(cr_label + off_sandbox_slot/*0x10*/);
     
-    uint64_t amfi_entitlements = kernel_read64(cr_label + off_amfi_slot);
-    printf("amfi_entitlements: 0x%llx\n", amfi_entitlements);
-    
-    kcall_init();
-    
-    if(OSDictionary_GetItem(amfi_entitlements, "get-task-allow") == 0) {
-        printf("seems like get-task-allow not exist..\n");
-    } else {
-        printf("seems like get-task-allow EXIST!\n");
+    if(kcall_init() != KERN_SUCCESS) {
+        printf("failed kcall_init\n");
+        exit(0);
     }
     
+    set_sandbox_exceptions(sandbox);
     
-    printf("get_iucc_osarray: 0x%llx\n", get_iucc_osarray());
+        
+//    printf("escape sandbox\n");
+//    uint64_t creds = kernel_read64(proc + off_p_ucred/*0xf0*/);
+//    uint64_t cr_label = kernel_read64(creds + off_ucred_cr_label/*0x78*/);
+//    kernel_write64(cr_label + off_sandbox_slot/*0x10*/, 0);
+//
+//    uint64_t amfi_entitlements = kernel_read64(cr_label + off_amfi_slot);
+//    printf("amfi_entitlements: 0x%llx\n", amfi_entitlements);
+//
+//    kcall_init();
+//
+//    if(OSDictionary_GetItem(amfi_entitlements, "get-task-allow") == 0) {
+//        printf("seems like get-task-allow not exist..\n");
+//    } else {
+//        printf("seems like get-task-allow EXIST!\n");
+//    }
+//
+//
+//    printf("get_iucc_osarray: 0x%llx\n", get_iucc_osarray());
     
 //    OSDictionary_SetItem(amfi_entitlements, "get-task-allow", 0xFFFFFFF0076302E8 + kslide /*offset_osboolean_true*/);
     
@@ -130,6 +145,8 @@ bool change_rootvnode(uint64_t vp, pid_t pid){
     kernel_write32(filedesc + 0x58, fd_flags);
     
     printf("finish\n");
+    sleep(3);
+    
     return true;
     
 }
@@ -195,18 +212,6 @@ int main(int argc, char *argv[], char *envp[]) {
         printf("error fakeroot not mounted\n");
         return 1;
     }
-    
-    if(kcall_init() != KERN_SUCCESS) {
-        printf("error kcall_init\n");
-        return 1;
-    }
-    
-    kern_return_t ret;
-    if(kcall(&ret, (0xFFFFFFF0075038B0 + kslide)/*csblob_get_cdhash*/, 1, 0x48/*user_client_trap_off*/) == KERN_SUCCESS) {
-        printf("testing kcall... csblob_get_cdhash(USER_CLIENT_TRAP_OFF): 0x%" PRIX32 "\n", ret);
-    }
-    
-    kcall_term();
     
     //uint64_t rootvp = getVnodeAtPath(FAKEROOTDIR);
     chdir("/");

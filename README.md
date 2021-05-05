@@ -2,7 +2,7 @@
 kernel level jailbreak detection bypass
 
 ## Support Devices
-- iOS 14.x only supported on checkra1n devices
+- iOS 14.x only supported on checkra1n devices. NOT SUPPORTED unc0ver or taurine.
 - iOS12.0-14.x? (confirmed on iOS12.4 and above)
 - A7-A13
 - unc0ver or checkra1n (~ iOS 13.x)

@@ -11,7 +11,7 @@ kernel level jailbreak detection bypass
 - KernBypass (Original) by @akusio_RR
 - fakevar by @MiscMisty
 - maphys by 0x7ff
-- vnodebypass and iOS14 Support by @XsF1re
+- iOS 14 Support by @XsF1re
 - jelbrekLib by @Jakeashacks
 - Translated by sohsatoh
 - iOS12 support by dora2-iOS
